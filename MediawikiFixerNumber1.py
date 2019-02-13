@@ -1,5 +1,6 @@
 import os
 import re as RegEx
+import math
 
 
 #=============================================================
@@ -42,6 +43,8 @@ def ProcessFile(filename):
             chunkTypes=chunkTypes+"s"
         elif chunk.startswith("{{convention"):
             chunkTypes=chunkTypes+"c"
+        elif chunk.startswith("{{files"):
+            chunkTypes=chunkTypes+"f"
         elif len(chunk) == 0 or chunk.isspace():
             chunkTypes=chunkTypes+"w"
         else:
@@ -71,11 +74,10 @@ def ProcessFile(filename):
             indexConv=x[0]
             indexFirstSeq=x[1]-1
 
-    conv=None
+    conv1=None
+    conv2=None
     if indexFirstSeq is not None:
         firstSeq=chunks[indexFirstSeq]
-        conv=chunks[indexConv]
-
         # Now pattern match the structure of the {{Sequence string to pull out the two convention names
         pattern="before=\[\[(.*)\]\]\s*\|\s*after=\[\[(.*)\]\]"   # Match: before=[[xxx]] | after=[[yyy]]
         m=RegEx.search(pattern, firstSeq)
@@ -83,12 +85,39 @@ def ProcessFile(filename):
             conv1=m.groups()[0]
             conv2=m.groups()[1]
 
-            # Now merge the names into the {{convention line, right before the closeing "}}"
-            conv=conv[:-2]+" | before=[["+conv1+"]] | after=[["+conv2+"]]}}"
 
-        # Process the chunks deleting one and replacing another
-        chunks[indexConv]=conv
+
+    # Look for a {{files item and move that to {{conv, also.
+    filesText=None
+    indexFiles=None
+    if "f" in chunkTypes:
+        indexFiles=chunkTypes.find("f")
+        pattern="\{\{files\s*\|\s*(.*)\}\}"
+        m=RegEx.search(pattern, chunks[indexFiles])
+        if m is not None:
+            filesText=" | "+m.groups()[0]
+
+    conv=chunks[indexConv]
+    if (conv1 is not None and conv2 is not None) or indexFiles is not None:
+        newConvText=""
+        if (conv1 is not None and conv2 is not None):
+            newConvText=" | before=[["+conv1+"]] | after=[["+conv2+"]]"
+        newFilesText="" if indexFiles is None else filesText
+
+        # Now merge the names into the {{convention line, right before the closing "}}"
+        conv=conv[:-2]+newConvText+newFilesText+"}}"
+
+    # Process the chunks depending on what was found
+    chunks[indexConv]=conv
+
+    # There are one or two indexes to delete.  They must be deleted from highest to lowest.
+    if indexFirstSeq is not None and indexFiles is None:
         del chunks[indexFirstSeq]
+    elif indexFiles is not None and indexFirstSeq is None:
+        del chunks[indexFiles]
+    elif indexFirstSeq is not None and indexFiles is not None:
+        del chunks[max(indexFirstSeq, indexFiles)]
+        del chunks[min(indexFirstSeq, indexFiles)]
 
     return chunks
 
@@ -97,11 +126,12 @@ def ProcessFile(filename):
 newSite=""
 oldSite=r"C:\Users\mlo\Dropbox\mlo"
 page="baycon.mediawiki"
-page="magicon.mediawiki"
 page="westercon-71.mediawiki"
 page="2kon1.mediawiki"
 page="2kon2.mediawiki"
 page="satellite-4.mediawiki"
+page="Dysprosium.mediawiki"
+page="magicon.mediawiki"
 
 newfile=ProcessFile(os.path.join(oldSite, page))
 with open(os.path.join(newSite, page), "w") as file:
