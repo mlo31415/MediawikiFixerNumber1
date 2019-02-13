@@ -74,43 +74,34 @@ def ProcessFile(filename):
             indexConv=x[0]
             indexFirstSeq=x[1]-1
 
-    conv1=None
-    conv2=None
+    newConvText=None
     if indexFirstSeq is not None:
         firstSeq=chunks[indexFirstSeq]
         # Now pattern match the structure of the {{Sequence string to pull out the two convention names
-        pattern="before=\[\[(.*)\]\]\s*\|\s*after=\[\[(.*)\]\]"   # Match: before=[[xxx]] | after=[[yyy]]
+        pattern="\{\{Sequence\s*\|(.*)\}\}"   # Match: before=[[xxx]] | after=[[yyy]]
         m=RegEx.search(pattern, firstSeq)
         if m is not None:
-            conv1=m.groups()[0]
-            conv2=m.groups()[1]
-
-
+            newConvText=m.groups()[0]
 
     # Look for a {{files item and move that to {{conv, also.
-    filesText=None
+    newFilesText=None
     indexFiles=None
     if "f" in chunkTypes:
         indexFiles=chunkTypes.find("f")
         pattern="\{\{files\s*\|\s*(.*)\}\}"
         m=RegEx.search(pattern, chunks[indexFiles])
         if m is not None:
-            filesText=" | "+m.groups()[0]
+            newFilesText=m.groups()[0]
 
+    # Now merge whatever we found into the {{conv chunk
+    # Note that if we found nothing, this does not change the chunk
     conv=chunks[indexConv]
-    if (conv1 is not None and conv2 is not None) or indexFiles is not None:
-        newConvText=""
-        if (conv1 is not None and conv2 is not None):
-            newConvText=" | before=[["+conv1+"]] | after=[["+conv2+"]]"
-        newFilesText="" if indexFiles is None else filesText
-
-        # Now merge the names into the {{convention line, right before the closing "}}"
-        conv=conv[:-2]+newConvText+newFilesText+"}}"
-
-    # Process the chunks depending on what was found
+    newConvText="" if indexConv is None else " | "+newConvText
+    newFilesText="" if indexFiles is None else " | "+newFilesText
+    conv=conv[:-2]+newConvText+newFilesText+"}}"
     chunks[indexConv]=conv
 
-    # There are one or two indexes to delete.  They must be deleted from highest to lowest.
+    # There are zero, one or two indexes to delete.  They must be deleted from highest to lowest.
     if indexFirstSeq is not None and indexFiles is None:
         del chunks[indexFirstSeq]
     elif indexFiles is not None and indexFirstSeq is None:
@@ -126,12 +117,13 @@ def ProcessFile(filename):
 newSite=""
 oldSite=r"C:\Users\mlo\Dropbox\mlo"
 page="baycon.mediawiki"
-page="westercon-71.mediawiki"
 page="2kon1.mediawiki"
 page="2kon2.mediawiki"
 page="satellite-4.mediawiki"
 page="Dysprosium.mediawiki"
 page="magicon.mediawiki"
+page="westercon-71.mediawiki"
+
 
 newfile=ProcessFile(os.path.join(oldSite, page))
 with open(os.path.join(newSite, page), "w") as file:
