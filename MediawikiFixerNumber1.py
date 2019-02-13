@@ -53,9 +53,9 @@ def ProcessFile(filename):
     indexFirstSeq=None
     indexConv=None
 
-    pattern1="(s)[sw]*(c)"
-    pattern2="(c)w*(s)"
-    m=RegEx.search(pattern1, chunkTypes)
+    pattern1="(s)[sw]*(c)"  # We care about the 1st S and the only C
+    pattern2="(c)w*(s)"     # Because we only care about the 1st S, we don't need to look for any others
+    m=RegEx.search(pattern1, chunkTypes)    # Check pattern 1
     if m is not None:
         # OK, we've found one.
         x=m.span()
@@ -63,11 +63,11 @@ def ProcessFile(filename):
         indexFirstSeq=x[0]
         indexConv=x[1]-1
     else:
-        m=RegEx.search(pattern2, chunkTypes)
+        m=RegEx.search(pattern2, chunkTypes)    # And check for pattern 2
         if m is not None:
             # OK, we've found one.
             x=m.span()
-            # There are two {{Sequences.  The first one needs to be analyzed and removed and merged into the {{convention
+            # We found a {{Sequence after the {{convention and  in needs to be analyzed and removed and merged into the {{convention
             indexConv=x[0]
             indexFirstSeq=x[1]-1
 
@@ -76,14 +76,14 @@ def ProcessFile(filename):
         firstSeq=chunks[indexFirstSeq]
         conv=chunks[indexConv]
 
-        # Now pattern match the structure of the {{convention string to pull out the two convention names
+        # Now pattern match the structure of the {{Sequence string to pull out the two convention names
         pattern="before=\[\[(.*)\]\]\s*\|\s*after=\[\[(.*)\]\]"   # Match: before=[[xxx]] | after=[[yyy]]
         m=RegEx.search(pattern, firstSeq)
         if m is not None:
             conv1=m.groups()[0]
             conv2=m.groups()[1]
 
-            # Now merge into the {{convention line, right before the closeing "}}"
+            # Now merge the names into the {{convention line, right before the closeing "}}"
             conv=conv[:-2]+" | before=[["+conv1+"]] | after=[["+conv2+"]]}}"
 
         # Process the chunks deleting one and replacing another
