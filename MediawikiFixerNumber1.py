@@ -14,7 +14,7 @@ def ProcessFile(filename):
         source=file.read()
 
     # The file can be viewed as spans of <stuff> interspersed with "{{"<other stuff>"}}"
-    # So analyize the file into a list of those components
+    # So analyze the file into a list of those components
     # We will assume that the "{{" and "}} are always balanced!
     chunks=[]
     while len(source) > 0:
@@ -35,6 +35,7 @@ def ProcessFile(filename):
             source=source[loc:]
 
     # Now I search the chunks for two chunks in a row that begin "{{Sequence..."  and then one that begins "{{convention" (with nothing more than whitespace between them).
+    # Now we search the chunks for one or more s's and one c in any order. The first s is merged with the c and any other s is ignored.
     chunkTypes=""
     for chunk in chunks:
         if chunk.startswith("{{Sequence"):
@@ -47,21 +48,33 @@ def ProcessFile(filename):
             chunkTypes=chunkTypes+"x"
 
     # Now we have a text string which shows the pattern of chunks.
-    # We're looking for a sequence "ssc" with any number of "w"s interspersed, but no "x"s.
+    # We're looking for a sequence with an s and a c  with any number of "w"s interspersed, but no "x"s.
     # Use Regex.
-    pattern="sw*sw*c"
-    m=RegEx.search(pattern, chunkTypes)
     indexFirstSeq=None
     indexConv=None
-    conv=None
+
+    pattern1="(s)[sw]*(c)"
+    pattern2="(c)[sw]*(s)"
+    m=RegEx.search(pattern1, chunkTypes)
     if m is not None:
         # OK, we've found one.
         x=m.span()
         # There are two {{Sequences.  The first one needs to be analyzed and removed and merged into the {{convention
         indexFirstSeq=x[0]
-        firstSeq=chunks[x[0]]
         indexConv=x[1]-1
-        conv=chunks[x[1]-1]
+    else:
+        m=RegEx.search(pattern2, chunkTypes)
+        if m is not None:
+            # OK, we've found one.
+            x=m.span()
+            # There are two {{Sequences.  The first one needs to be analyzed and removed and merged into the {{convention
+            indexConv=x[0]
+            indexFirstSeq=x[1]-1
+
+    conv=None
+    if indexFirstSeq is not None:
+        firstSeq=chunks[indexFirstSeq]
+        conv=chunks[indexConv]
 
         # Now pattern match the structure of the {{convention string to pull out the two convention names
         pattern="before=\[\[(.*)\]\]\s*\|\s*after=\[\[(.*)\]\]"   # Match: before=[[xxx]] | after=[[yyy]]
@@ -73,9 +86,9 @@ def ProcessFile(filename):
             # Now merge into the {{convention line, right before the closeing "}}"
             conv=conv[:-2]+" | before=[["+conv1+"]] | after=[["+conv2+"]]}}"
 
-    # Process the chunks deleting one and replacing another
-    chunks[indexConv]=conv
-    del chunks[indexFirstSeq]
+        # Process the chunks deleting one and replacing another
+        chunks[indexConv]=conv
+        del chunks[indexFirstSeq]
 
     return chunks
 
@@ -83,8 +96,11 @@ def ProcessFile(filename):
 
 newSite=""
 oldSite=r"C:\Users\mlo\Dropbox\mlo"
-page="magicon.mediawiki"
 page="baycon.mediawiki"
+page="magicon.mediawiki"
+page="westercon-71.mediawiki"
+page="2kon1.mediawiki"
+page="2kon2.mediawiki"
 
 newfile=ProcessFile(os.path.join(oldSite, page))
 with open(os.path.join(newSite, page), "w") as file:
