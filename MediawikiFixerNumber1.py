@@ -54,7 +54,7 @@ def ProcessFile(filename):
     indexConv=None
 
     pattern1="(s)[sw]*(c)"
-    pattern2="(c)[sw]*(s)"
+    pattern2="(c)w*(s)"
     m=RegEx.search(pattern1, chunkTypes)
     if m is not None:
         # OK, we've found one.
@@ -101,6 +101,7 @@ page="magicon.mediawiki"
 page="westercon-71.mediawiki"
 page="2kon1.mediawiki"
 page="2kon2.mediawiki"
+page="satellite-4.mediawiki"
 
 newfile=ProcessFile(os.path.join(oldSite, page))
 with open(os.path.join(newSite, page), "w") as file:
